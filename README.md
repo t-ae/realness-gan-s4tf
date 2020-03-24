@@ -1,3 +1,3 @@
 # RealnessGAN
 
-A description of this package.
+https://arxiv.org/abs/2002.05512
