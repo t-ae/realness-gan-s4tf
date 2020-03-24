@@ -22,7 +22,7 @@ let config = Config(
         enableBatchNorm: true
     ),
     D: Discriminator.Config(
-        numberOfOutcomes: 10
+        numberOfOutcomes: 16
     )
 )
 
