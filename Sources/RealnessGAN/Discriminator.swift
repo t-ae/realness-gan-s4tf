@@ -3,9 +3,9 @@ import TensorFlow
 import GANUtils
 
 struct DBlock: Layer {
-    var conv1: Conv2D<Float>
-    var conv2: Conv2D<Float>
-    var shortcut: Conv2D<Float>
+    var conv1: SNConv2D<Float>
+    var conv2: SNConv2D<Float>
+    var shortcut: SNConv2D<Float>
     
     @noDerivative
     let learnableSC: Bool
@@ -16,16 +16,16 @@ struct DBlock: Layer {
         inputChannels: Int,
         outputChannels: Int
     ) {
-        conv1 = Conv2D(filterShape: (3, 3, inputChannels, outputChannels),
+        conv1 = SNConv2D(filterShape: (3, 3, inputChannels, outputChannels),
                          padding: .same,
                          filterInitializer: heNormal())
-        conv2 = Conv2D(filterShape: (4, 4, outputChannels, outputChannels),
+        conv2 = SNConv2D(filterShape: (4, 4, outputChannels, outputChannels),
                          strides: (2, 2),
                          padding: .same,
                          filterInitializer: heNormal())
         
         learnableSC = inputChannels != outputChannels
-        shortcut = Conv2D(filterShape: (1, 1, inputChannels, learnableSC ? outputChannels : 0),
+        shortcut = SNConv2D(filterShape: (1, 1, inputChannels, learnableSC ? outputChannels : 0),
                             useBias: false,
                             filterInitializer: heNormal())
     }
@@ -62,10 +62,10 @@ struct Discriminator: Layer {
     
     var norm: InstanceNorm<Float>
     
-    var meanConv: Conv2D<Float>
-    var logVarConv: Conv2D<Float>
+    var meanConv: SNConv2D<Float>
+    var logVarConv: SNConv2D<Float>
     
-    var fromRGB: Conv2D<Float>
+    var fromRGB: SNConv2D<Float>
     
     var avgPool: AvgPool2D<Float> = AvgPool2D(poolSize: (2, 2), strides: (2, 2))
     
@@ -88,7 +88,7 @@ struct Discriminator: Layer {
             return (min(i, config.maxChannels), min(o, config.maxChannels))
         }
         
-        fromRGB = Conv2D(filterShape: (1, 1, 3, config.baseChannels),
+        fromRGB = SNConv2D(filterShape: (1, 1, 3, config.baseChannels),
                            filterInitializer: heNormal())
         
         let io256 = ioChannels(for: .x256)
@@ -111,10 +111,10 @@ struct Discriminator: Layer {
         
         norm = InstanceNorm(featureCount: io8.o)
         
-        meanConv = Conv2D(filterShape: (4, 4, io8.0, config.numberOfOutcomes),
-                          filterInitializer: heNormal())
-        logVarConv = Conv2D(filterShape: (4, 4, io8.0, config.numberOfOutcomes),
+        meanConv = SNConv2D(filterShape: (4, 4, io8.0, config.numberOfOutcomes),
                             filterInitializer: heNormal())
+        logVarConv = SNConv2D(filterShape: (4, 4, io8.0, config.numberOfOutcomes),
+                              filterInitializer: heNormal())
     }
     
     @differentiable
