@@ -61,20 +61,22 @@ struct Discriminator: Layer {
         var maxChannels: Int = 256
     }
     
+    var fromRGB: SNConv2D<Float>
+    
     var x256Block: DBlock
     var x128Block: DBlock
     var x64Block: DBlock
     var x32Block: DBlock
     var x16Block: DBlock
     var x8Block: DBlock
-//    var x4Block: DBlock
+    
+    var minibatchStdConcat: MinibatchStdConcat<Float>
+    var tail: SNConv2D<Float>
     
     var norm: InstanceNorm<Float>
     
-    var meanConv: SNConv2D<Float>
-    var logVarConv: SNConv2D<Float>
-    
-    var fromRGB: SNConv2D<Float>
+    var meanDense: SNDense<Float>
+    var logVarDense: SNDense<Float>
     
     var avgPool: AvgPool2D<Float> = AvgPool2D(poolSize: (2, 2), strides: (2, 2))
     
@@ -119,12 +121,16 @@ struct Discriminator: Layer {
         let io8 = ioChannels(for: .x8)
         x8Block = DBlock(inputChannels: io8.i, outputChannels: io8.o, resnet: resnet)
         
+        minibatchStdConcat = MinibatchStdConcat(groupSize: 4)
+        tail = SNConv2D(filterShape: (4, 4, io8.o + 1, io8.o),
+                        filterInitializer: heNormal())
+        
         norm = InstanceNorm(featureCount: io8.o)
         
-        meanConv = SNConv2D(filterShape: (4, 4, io8.o, config.numberOfOutcomes),
-                            filterInitializer: heNormal())
-        logVarConv = SNConv2D(filterShape: (4, 4, io8.o, config.numberOfOutcomes),
-                              filterInitializer: heNormal())
+        meanDense = SNDense(inputSize: io8.o, outputSize: config.numberOfOutcomes,
+                            weightInitializer: heNormal())
+        logVarDense = SNDense(inputSize: io8.o, outputSize: config.numberOfOutcomes,
+                              weightInitializer: heNormal())
     }
     
     @differentiable
@@ -152,13 +158,17 @@ struct Discriminator: Layer {
             x = x8Block(x)
         }
         
-        // The variance of the output of resnet can be large in early steps.
-        x = norm(x)
+        x = leakyRelu(x)
+        x = minibatchStdConcat(x)
+        x = tail(x)
         
-        let mean = meanConv(x).squeezingShape(at: 1, 2)
+        // The variance of the output of resnet can be large in early steps.
+        x = norm(x).squeezingShape(at: 1, 2)
+        
+        let mean = meanDense(x)
         
         if reparametrize {
-            let logVar = logVarConv(x).squeezingShape(at: 1, 2)
+            let logVar = logVarDense(x)
             let noise = Tensor<Float>(randomNormal: mean.shape)
             x = noise * exp(0.5 * logVar) + mean
         } else {
