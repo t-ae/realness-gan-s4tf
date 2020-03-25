@@ -165,6 +165,7 @@ struct Discriminator: Layer {
         // The variance of the output of resnet can be large in early steps.
         x = norm(x).squeezingShape(at: 1, 2)
         
+        x = leakyRelu(x)
         let mean = meanDense(x)
         
         if reparametrize {
