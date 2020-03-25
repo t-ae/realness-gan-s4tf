@@ -111,9 +111,9 @@ struct Discriminator: Layer {
         
         norm = InstanceNorm(featureCount: io8.o)
         
-        meanConv = SNConv2D(filterShape: (4, 4, io8.0, config.numberOfOutcomes),
+        meanConv = SNConv2D(filterShape: (4, 4, io8.o, config.numberOfOutcomes),
                             filterInitializer: heNormal())
-        logVarConv = SNConv2D(filterShape: (4, 4, io8.0, config.numberOfOutcomes),
+        logVarConv = SNConv2D(filterShape: (4, 4, io8.o, config.numberOfOutcomes),
                               filterInitializer: heNormal())
     }
     
@@ -154,6 +154,6 @@ struct Discriminator: Layer {
         } else {
             x = mean
         }
-        return softmax(x, alongAxis: 1)
+        return softmax(x)
     }
 }
