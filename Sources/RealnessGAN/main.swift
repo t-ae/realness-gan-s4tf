@@ -9,7 +9,7 @@ let rng = XorshiftRandomNumberGenerator()
 
 let imageSize: ImageSize = .x32
 let latentSize = 256
-let batchSize = 16
+let batchSize = 32
 
 let config = Config(
     batchSize: batchSize,
