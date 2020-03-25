@@ -27,7 +27,7 @@ func createAnchor(numberOfOutcomes: Int, center: Float, samples: Int = 1000) -> 
         histogram[-1] -= Tensor(noise .> range).sum()
     }
     
-    let float = Tensor<Float>(histogram.scalars.map { Float($0) })
+    let float = Tensor<Float>(histogram)
     return float / float.sum()
 }
 
