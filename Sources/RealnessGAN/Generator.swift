@@ -49,7 +49,7 @@ struct GBlock: Layer {
         if learnableSC {
             sc = shortcut(sc)
         }
-        return 0.1*x + sc
+        return x + sc
     }
 }
 
@@ -119,7 +119,7 @@ struct Generator: Layer {
                            resize2x: resize, enableBatchNorm: enableBN)
         
         toRGB = Conv2D(filterShape: (1, 1, baseChannels, 3),
-                       activation: tanh,
+                       activation: identity,
                        filterInitializer: heNormal())
     }
     

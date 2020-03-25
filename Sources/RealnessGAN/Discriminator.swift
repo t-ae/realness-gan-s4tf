@@ -41,7 +41,7 @@ struct DBlock: Layer {
             sc = shortcut(sc)
         }
         
-        return 0.1*x + sc
+        return x + sc
     }
 }
 
