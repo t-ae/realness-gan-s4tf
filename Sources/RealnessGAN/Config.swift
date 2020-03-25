@@ -4,7 +4,7 @@ import GANUtils
 struct Config: Codable {
     var batchSize: Int
     var learningRates: GDPair<Float>
-    var reparameterizeInGTraining: Bool
+    var featureResampling: GDPair<Bool>
     
     var imageSize: ImageSize
     var G: Generator.Config

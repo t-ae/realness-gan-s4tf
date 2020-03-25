@@ -14,7 +14,7 @@ let batchSize = 32
 let config = Config(
     batchSize: batchSize,
     learningRates: GDPair(G: 1e-4, D: 4e-4),
-    reparameterizeInGTraining: false,
+    featureResampling: GDPair(G: true, D: true),
     imageSize: imageSize,
     G: Generator.Config(
         latentSize: latentSize,
@@ -101,7 +101,7 @@ func trainSingleStep(reals: Tensor<Float>, step: Int) {
     let fakePlotPeriod = 1000
     
     // Update discriminator
-    discriminator.reparametrize = true
+    discriminator.reparametrize = config.featureResampling.D
     let 𝛁discriminator = gradient(at: discriminator) { discriminator -> Tensor<Float> in
         let fakes = generator(noise)
         let realScores = discriminator(reals)
@@ -125,7 +125,7 @@ func trainSingleStep(reals: Tensor<Float>, step: Int) {
     optD.update(&discriminator, along: 𝛁discriminator)
     
     // Update Generator
-    discriminator.reparametrize = config.reparameterizeInGTraining
+    discriminator.reparametrize = config.featureResampling.G
     let 𝛁generator = gradient(at: generator) { generator ->Tensor<Float> in
         let fakes = generator(noise)
         let realScores = discriminator(reals)
