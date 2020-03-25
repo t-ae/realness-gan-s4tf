@@ -7,7 +7,7 @@ import TensorBoardX
 Context.local.randomSeed = (42, 42)
 let rng = XorshiftRandomNumberGenerator()
 
-let imageSize: ImageSize = .x256
+let imageSize: ImageSize = .x32
 let latentSize = 256
 let batchSize = 16
 
@@ -18,11 +18,13 @@ let config = Config(
     imageSize: imageSize,
     G: Generator.Config(
         latentSize: latentSize,
+        resnet: true,
         resizeMethod: .bilinear,
         enableBatchNorm: true
     ),
     D: Discriminator.Config(
-        numberOfOutcomes: 16
+        numberOfOutcomes: 16,
+        resnet: true
     )
 )
 

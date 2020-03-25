@@ -9,6 +9,8 @@ struct GBlock: Layer {
     
     @noDerivative
     let learnableSC: Bool
+    @noDerivative
+    let resnet: Bool
     
     var bn1: Configurable<BatchNorm<Float>>
     var bn2: Configurable<BatchNorm<Float>>
@@ -19,6 +21,7 @@ struct GBlock: Layer {
         inputChannels: Int,
         outputChannels: Int,
         resize2x: Resize,
+        resnet: Bool,
         enableBatchNorm: Bool
     ) {
         conv1 = TransposedConv2D(filterShape: (4, 4, outputChannels, inputChannels),
@@ -29,7 +32,7 @@ struct GBlock: Layer {
                                  padding: .same,
                                  filterInitializer: heNormal())
         
-        learnableSC = inputChannels != outputChannels
+        learnableSC = (inputChannels != outputChannels) && resnet
         shortcut = Conv2D(filterShape: (1, 1, inputChannels, learnableSC ? outputChannels : 0),
                           useBias: false,
                           filterInitializer: heNormal())
@@ -37,6 +40,7 @@ struct GBlock: Layer {
         bn1 = Configurable(BatchNorm(featureCount: inputChannels), enabled: enableBatchNorm)
         bn2 = Configurable(BatchNorm(featureCount: outputChannels), enabled: enableBatchNorm)
         self.resize2x = resize2x
+        self.resnet = resnet
     }
     
     @differentiable
@@ -44,6 +48,10 @@ struct GBlock: Layer {
         var x = input
         x = conv1(leakyRelu(bn1(x)))
         x = conv2(leakyRelu(bn2(x)))
+        
+        guard resnet else {
+            return x
+        }
         
         var sc = resize2x(input)
         if learnableSC {
@@ -56,6 +64,7 @@ struct GBlock: Layer {
 struct Generator: Layer {
     struct Config: Codable {
         var latentSize: Int
+        var resnet: Bool
         var resizeMethod: Resize.Method
         var enableBatchNorm: Bool
         var baseChannels: Int = 8
@@ -81,6 +90,7 @@ struct Generator: Layer {
         let baseChannels = config.baseChannels
         let maxChannels = config.maxChannels
         let resize = Resize(config.resizeMethod, outputSize: .factor(x: 2, y: 2), alignCorners: true)
+        let resnet = config.resnet
         let enableBN = config.enableBatchNorm
         
         func ioChannels(for size: ImageSize) -> (i: Int, o: Int) {
@@ -96,27 +106,27 @@ struct Generator: Layer {
         let io8 = ioChannels(for: .x8)
         head = Dense(inputSize: config.latentSize, outputSize: io8.i * 4 * 4)
         x8Block = GBlock(inputChannels: io8.i, outputChannels: io8.o,
-                         resize2x: resize, enableBatchNorm: enableBN)
+                         resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
         
         let io16 = ioChannels(for: .x16)
         x16Block = GBlock(inputChannels: io16.i, outputChannels: io16.o,
-                          resize2x: resize, enableBatchNorm: enableBN)
+                          resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
         
         let io32 = ioChannels(for: .x32)
         x32Block = GBlock(inputChannels: io32.i, outputChannels: io32.o,
-                          resize2x: resize, enableBatchNorm: enableBN)
+                          resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
         
         let io64 = ioChannels(for: .x64)
         x64Block = GBlock(inputChannels: io64.i, outputChannels: io64.o,
-                          resize2x: resize, enableBatchNorm: enableBN)
+                          resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
         
         let io128 = ioChannels(for: .x128)
         x128Block = GBlock(inputChannels: io128.i, outputChannels: io128.o,
-                           resize2x: resize, enableBatchNorm: enableBN)
+                           resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
         
         let io256 = ioChannels(for: .x256)
         x256Block = GBlock(inputChannels: io256.i, outputChannels: io256.o,
-                           resize2x: resize, enableBatchNorm: enableBN)
+                           resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
         
         toRGB = Conv2D(filterShape: (1, 1, baseChannels, 3),
                        activation: identity,
