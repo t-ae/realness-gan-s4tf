@@ -129,7 +129,7 @@ struct Generator: Layer {
                            resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
         
         toRGB = Conv2D(filterShape: (1, 1, baseChannels, 3),
-                       activation: identity,
+                       activation: tanh,
                        filterInitializer: heNormal())
     }
     

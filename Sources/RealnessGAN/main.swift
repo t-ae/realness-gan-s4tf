@@ -107,9 +107,13 @@ func trainSingleStep(reals: Tensor<Float>, step: Int) {
         let realScores = discriminator(reals)
         let fakeScores = discriminator(fakes)
         
-        let loss = klDivergence(p: realAnchor, q: realScores) + klDivergence(p: fakeAnchor, q: fakeScores)
+        let realAnchor_realScores = klDivergence(p: realAnchor, q: realScores)
+        let fakeAnchor_fakeScoers = klDivergence(p: fakeAnchor, q: fakeScores)
+        let loss = realAnchor_realScores + fakeAnchor_fakeScoers
         
         writer.addScalar(tag: "loss/D", scalar: loss.scalarized(), globalStep: step)
+        writer.addScalar(tag: "kl/realAnchor_realScores", scalar: realAnchor_realScores.scalarized(),
+                         globalStep: step)
         
         if step % fakePlotPeriod == 0 {
             writer.plotImages(tag: "reals", images: reals, globalStep: step)
@@ -127,9 +131,15 @@ func trainSingleStep(reals: Tensor<Float>, step: Int) {
         let realScores = discriminator(reals)
         let fakeScores = discriminator(fakes)
         
-        let loss = klDivergence(p: realScores, q: fakeScores) - klDivergence(p: fakeAnchor, q: fakeScores)
+        let realScores_fakeScores = klDivergence(p: realScores, q: fakeScores)
+        let fakeAnchor_fakeScores = klDivergence(p: fakeAnchor, q: fakeScores)
+        let loss = realScores_fakeScores - fakeAnchor_fakeScores
         
         writer.addScalar(tag: "loss/G", scalar: loss.scalarized(), globalStep: step)
+        writer.addScalar(tag: "kl/realScores_fakeScores", scalar: realScores_fakeScores.scalarized(),
+                         globalStep: step)
+        writer.addScalar(tag: "kl/fakeAnchor_fakeScores", scalar: fakeAnchor_fakeScores.scalarized(),
+                         globalStep: step)
         
         return loss
     }
