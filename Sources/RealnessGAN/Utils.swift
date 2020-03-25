@@ -21,10 +21,13 @@ func createAnchor(numberOfOutcomes: Int, center: Float, samples: Int = 1000) -> 
         nbins: Tensor(Int32(numberOfOutcomes))
     )
     // Subtract out of range values
-    histogram[0] -= Tensor(noise .< -range).sum()
-    histogram[-1] -= Tensor(noise .> range).sum()
+    // FIXME: Bug on GPU
+    withDevice(.cpu) {
+        histogram[0] -= Tensor(noise .< -range).sum()
+        histogram[-1] -= Tensor(noise .> range).sum()
+    }
     
-    let float = Tensor<Float>(histogram)
+    let float = Tensor<Float>(histogram.scalars.map { Float($0) })
     return float / float.sum()
 }
 
