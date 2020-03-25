@@ -114,7 +114,6 @@ func trainSingleStep(reals: Tensor<Float>, step: Int) {
             writer.plotImages(tag: "fakes", images: fakes, globalStep: step)
             writer.flush()
         }
-        
         return loss
     }
     optD.update(&discriminator, along: 𝛁discriminator)
@@ -123,9 +122,10 @@ func trainSingleStep(reals: Tensor<Float>, step: Int) {
     discriminator.reparametrize = config.reparameterizeInGTraining
     let 𝛁generator = gradient(at: generator) { generator ->Tensor<Float> in
         let fakes = generator(noise)
-        let scores = discriminator(fakes)
+        let realScores = discriminator(reals)
+        let fakeScores = discriminator(fakes)
         
-        let loss = klDivergence(p: realAnchor, q: scores) - klDivergence(p: fakeAnchor, q: scores)
+        let loss = klDivergence(p: realScores, q: fakeScores) - klDivergence(p: fakeAnchor, q: fakeScores)
         
         writer.addScalar(tag: "loss/G", scalar: loss.scalarized(), globalStep: step)
         
