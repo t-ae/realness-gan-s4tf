@@ -30,8 +30,8 @@ var generator = Generator(config: config.G, imageSize: imageSize)
 let avgG = ModelAveraging(average: generator, beta: 0.99)
 var discriminator = Discriminator(config: config.D, imageSize: imageSize)
 
-let optG = Adam(for: generator, learningRate: config.learningRates.D)
-let optD = Adam(for: discriminator, learningRate: config.learningRates.D)
+let optG = Adam(for: generator, learningRate: config.learningRates.D, beta1: 0.5, beta2: 0.999)
+let optD = Adam(for: discriminator, learningRate: config.learningRates.D, beta1: 0.5, beta2: 0.999)
 
 let realAnchor = createAnchor(numberOfOutcomes: config.D.numberOfOutcomes, center: 1)
 let fakeAnchor = createAnchor(numberOfOutcomes: config.D.numberOfOutcomes, center: -1)

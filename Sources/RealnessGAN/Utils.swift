@@ -13,11 +13,17 @@ public func sampleNoise(size: Int, latentSize: Int) -> Tensor<Float> {
 }
 
 func createAnchor(numberOfOutcomes: Int, center: Float, samples: Int = 1000) -> Tensor<Float> {
-    let histogram: Tensor<Int32> = _Raw.histogramFixedWidth(
-        Tensor<Float>(randomNormal: [samples]) + center,
-        valueRange: [-2, 2],
+    let range: Float = 2
+    let noise = Tensor<Float>(randomNormal: [samples]) + center
+    var histogram: Tensor<Int32> = _Raw.histogramFixedWidth(
+        noise,
+        valueRange: Tensor([-range, range]),
         nbins: Tensor(Int32(numberOfOutcomes))
     )
+    // Subtract out of range values
+    histogram[0] -= Tensor(noise .< -range).sum()
+    histogram[-1] -= Tensor(noise .> range).sum()
+    
     let float = Tensor<Float>(histogram)
     return float / float.sum()
 }
