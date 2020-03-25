@@ -8,7 +8,7 @@ Context.local.randomSeed = (42, 42)
 let rng = XorshiftRandomNumberGenerator()
 
 let imageSize: ImageSize = .x32
-let latentSize = 256
+let latentSize = 128
 let batchSize = 32
 
 let config = Config(
@@ -23,7 +23,7 @@ let config = Config(
         enableBatchNorm: true
     ),
     D: Discriminator.Config(
-        numberOfOutcomes: 16,
+        numberOfOutcomes: 8,
         resnet: true
     )
 )
