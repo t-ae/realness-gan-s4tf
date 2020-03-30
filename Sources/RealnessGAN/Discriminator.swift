@@ -48,41 +48,49 @@ struct Discriminator: Layer {
         x256Block = SNConv2D<Float>(filterShape: (3, 3, io256.i, io256.o),
                                     strides: (2, 2), padding: .same,
                                     activation: lrelu,
+                                    useBias: false,
                                     filterInitializer: heNormal())
         
         let io128 = ioChannels(for: .x128)
         x128Block = SNConv2D<Float>(filterShape: (3, 3, io128.i, io128.o),
                                     strides: (2, 2), padding: .same,
                                     activation: lrelu,
+                                    useBias: false,
                                     filterInitializer: heNormal())
         
         let io64 = ioChannels(for: .x64)
         x64Block = SNConv2D<Float>(filterShape: (3, 3, io64.i, io64.o),
                                    strides: (2, 2), padding: .same,
                                    activation: lrelu,
+                                   useBias: false,
                                    filterInitializer: heNormal())
         
         let io32 = ioChannels(for: .x32)
         x32Block = SNConv2D<Float>(filterShape: (3, 3, io32.i, io32.o),
                                    strides: (2, 2), padding: .same,
                                    activation: lrelu,
+                                   useBias: false,
                                    filterInitializer: heNormal())
         
         let io16 = ioChannels(for: .x16)
         x16Block = SNConv2D<Float>(filterShape: (3, 3, io16.i, io16.o),
                                    strides: (2, 2), padding: .same,
                                    activation: lrelu,
+                                   useBias: false,
                                    filterInitializer: heNormal())
         
         let io8 = ioChannels(for: .x8)
         x8Block = SNConv2D<Float>(filterShape: (3, 3, io8.i, io8.o),
                                   strides: (2, 2), padding: .same,
                                   activation: lrelu,
+                                  useBias: false,
                                   filterInitializer: heNormal())
         
         meanConv = SNConv2D(filterShape: (4, 4, io8.o, config.numberOfOutcomes),
+                            useBias: false,
                             filterInitializer: heNormal())
         logVarConv = SNConv2D(filterShape: (4, 4, io8.o, config.numberOfOutcomes),
+                              useBias: false,
                               filterInitializer: heNormal())
     }
     

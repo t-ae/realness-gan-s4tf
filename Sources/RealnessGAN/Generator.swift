@@ -89,6 +89,7 @@ struct Generator: Layer {
         
         toRGB = Conv2D(filterShape: (1, 1, baseChannels, 3),
                        activation: tanh,
+                       useBias: false,
                        filterInitializer: heNormal())
     }
     
