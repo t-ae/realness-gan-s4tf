@@ -3,75 +3,41 @@ import TensorFlow
 import GANUtils
 
 struct GBlock: Layer {
-    var conv1: TransposedConv2D<Float>
-    var conv2: TransposedConv2D<Float>
-    var shortcut: Conv2D<Float>
+    var conv: TransposedConv2D<Float>
     
-    @noDerivative
-    let learnableSC: Bool
-    @noDerivative
-    let resnet: Bool
-    
-    var bn1: Configurable<BatchNorm<Float>>
-    var bn2: Configurable<BatchNorm<Float>>
-    
-    var resize2x: Resize
+    var bn: BatchNorm<Float>
     
     init(
         inputChannels: Int,
         outputChannels: Int,
-        resize2x: Resize,
-        resnet: Bool,
-        enableBatchNorm: Bool
+        initialBlock: Bool = false
     ) {
-        conv1 = TransposedConv2D(filterShape: (4, 4, outputChannels, inputChannels),
-                                 strides: (2, 2),
-                                 padding: .same,
-                                 filterInitializer: heNormal())
-        conv2 = TransposedConv2D(filterShape: (4, 4, outputChannels, outputChannels),
-                                 padding: .same,
-                                 filterInitializer: heNormal())
-        
-        learnableSC = (inputChannels != outputChannels) && resnet
-        shortcut = Conv2D(filterShape: (1, 1, inputChannels, learnableSC ? outputChannels : 0),
-                          useBias: false,
-                          filterInitializer: heNormal())
-        
-        bn1 = Configurable(BatchNorm(featureCount: inputChannels), enabled: enableBatchNorm)
-        bn2 = Configurable(BatchNorm(featureCount: outputChannels), enabled: enableBatchNorm)
-        self.resize2x = resize2x
-        self.resnet = resnet
+        let padding: Padding = initialBlock ? .valid : .same
+        conv = TransposedConv2D(filterShape: (4, 4, outputChannels, inputChannels),
+                                strides: (2, 2),
+                                padding: padding,
+                                useBias: false,
+                                filterInitializer: heNormal())
+        bn = BatchNorm(featureCount: outputChannels)
     }
     
     @differentiable
     func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        var x = input
-        x = conv1(leakyRelu(bn1(x)))
-        x = conv2(leakyRelu(bn2(x)))
-        
-        guard resnet else {
-            return x
-        }
-        
-        var sc = resize2x(input)
-        if learnableSC {
-            sc = shortcut(sc)
-        }
-        return x + sc
+        var x = conv(input)
+        x = bn(x)
+        x = lrelu(x)
+        return x
     }
 }
 
 struct Generator: Layer {
     struct Config: Codable {
         var latentSize: Int
-        var resnet: Bool
-        var resizeMethod: Resize.Method
-        var enableBatchNorm: Bool
         var baseChannels: Int = 8
         var maxChannels: Int = 256
     }
     
-    var head: Dense<Float>
+    var x4Block: GBlock
     var x8Block: GBlock
     var x16Block: GBlock
     var x32Block: GBlock
@@ -89,9 +55,6 @@ struct Generator: Layer {
         
         let baseChannels = config.baseChannels
         let maxChannels = config.maxChannels
-        let resize = Resize(config.resizeMethod, outputSize: .factor(x: 2, y: 2), alignCorners: true)
-        let resnet = config.resnet
-        let enableBN = config.enableBatchNorm
         
         func ioChannels(for size: ImageSize) -> (i: Int, o: Int) {
             guard size <= imageSize else {
@@ -103,30 +66,26 @@ struct Generator: Layer {
             return (min(i, maxChannels), min(o, maxChannels))
         }
         
+        let io4 = ioChannels(for: .x4)
+        x4Block = GBlock(inputChannels: config.latentSize, outputChannels: io4.o, initialBlock: true)
+        
         let io8 = ioChannels(for: .x8)
-        head = Dense(inputSize: config.latentSize, outputSize: io8.i * 4 * 4)
-        x8Block = GBlock(inputChannels: io8.i, outputChannels: io8.o,
-                         resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
+        x8Block = GBlock(inputChannels: io8.i, outputChannels: io8.o)
         
         let io16 = ioChannels(for: .x16)
-        x16Block = GBlock(inputChannels: io16.i, outputChannels: io16.o,
-                          resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
+        x16Block = GBlock(inputChannels: io16.i, outputChannels: io16.o)
         
         let io32 = ioChannels(for: .x32)
-        x32Block = GBlock(inputChannels: io32.i, outputChannels: io32.o,
-                          resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
+        x32Block = GBlock(inputChannels: io32.i, outputChannels: io32.o)
         
         let io64 = ioChannels(for: .x64)
-        x64Block = GBlock(inputChannels: io64.i, outputChannels: io64.o,
-                          resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
+        x64Block = GBlock(inputChannels: io64.i, outputChannels: io64.o)
         
         let io128 = ioChannels(for: .x128)
-        x128Block = GBlock(inputChannels: io128.i, outputChannels: io128.o,
-                           resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
+        x128Block = GBlock(inputChannels: io128.i, outputChannels: io128.o)
         
         let io256 = ioChannels(for: .x256)
-        x256Block = GBlock(inputChannels: io256.i, outputChannels: io256.o,
-                           resize2x: resize, resnet: resnet, enableBatchNorm: enableBN)
+        x256Block = GBlock(inputChannels: io256.i, outputChannels: io256.o)
         
         toRGB = Conv2D(filterShape: (1, 1, baseChannels, 3),
                        activation: tanh,
@@ -135,41 +94,41 @@ struct Generator: Layer {
     
     @differentiable
     func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        var x = input
+        var x = input.expandingShape(at: 1, 2)
         
-        x = head(x).reshaped(to: [input.shape[0], 4, 4, -1])
+        x = x4Block(x)
         
         if imageSize == .x4 {
-            return toRGB(leakyRelu(x))
+            return toRGB(x)
         }
         
         x = x8Block(x)
         if imageSize == .x8 {
-            return toRGB(leakyRelu(x))
+            return toRGB(x)
         }
         
         x = x16Block(x)
         if imageSize == .x16 {
-            return toRGB(leakyRelu(x))
+            return toRGB(x)
         }
         
         x = x32Block(x)
         if imageSize == .x32 {
-            return toRGB(leakyRelu(x))
+            return toRGB(x)
         }
         
         x = x64Block(x)
         if imageSize == .x64 {
-            return toRGB(leakyRelu(x))
+            return toRGB(x)
         }
         
         x = x128Block(x)
         if imageSize == .x128 {
-            return toRGB(leakyRelu(x))
+            return toRGB(x)
         }
         
         x = x256Block(x)
-        return toRGB(leakyRelu(x))
+        return toRGB(x)
     }
 }
 

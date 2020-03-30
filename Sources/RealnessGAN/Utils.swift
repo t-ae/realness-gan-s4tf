@@ -2,6 +2,11 @@ import Foundation
 import TensorFlow
 import TensorBoardX
 
+@differentiable
+func lrelu(_ x: Tensor<Float>) -> Tensor<Float> {
+    leakyRelu(x)
+}
+
 @differentiable(wrt: (p, q))
 func klDivergence(p: Tensor<Float>, q: Tensor<Float>, epsilon: Float = 1e-8) -> Tensor<Float> {
     let tmp = p * log((p + epsilon) / (q + epsilon))

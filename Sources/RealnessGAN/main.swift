@@ -17,14 +17,10 @@ let config = Config(
     featureResampling: GDPair(G: true, D: true),
     imageSize: imageSize,
     G: Generator.Config(
-        latentSize: latentSize,
-        resnet: true,
-        resizeMethod: .bilinear,
-        enableBatchNorm: true
+        latentSize: latentSize
     ),
     D: Discriminator.Config(
-        numberOfOutcomes: 8,
-        resnet: true
+        numberOfOutcomes: 8
     )
 )
 
