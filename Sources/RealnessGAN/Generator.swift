@@ -12,7 +12,7 @@ struct GBlock: Layer {
         outputChannels: Int,
         initialBlock: Bool = false
     ) {
-        conv = TransposedConv2D(filterShape: (3, 3, outputChannels, inputChannels),
+        conv = TransposedConv2D(filterShape: (4, 4, outputChannels, inputChannels),
                                 padding: initialBlock ? .valid : .same,
                                 useBias: false,
                                 filterInitializer: heNormal())
