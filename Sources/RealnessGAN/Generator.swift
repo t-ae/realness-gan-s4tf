@@ -12,10 +12,8 @@ struct GBlock: Layer {
         outputChannels: Int,
         initialBlock: Bool = false
     ) {
-        let padding: Padding = initialBlock ? .valid : .same
-        conv = TransposedConv2D(filterShape: (4, 4, outputChannels, inputChannels),
-                                strides: (2, 2),
-                                padding: padding,
+        conv = TransposedConv2D(filterShape: (3, 3, outputChannels, inputChannels),
+                                padding: initialBlock ? .valid : .same,
                                 useBias: false,
                                 filterInitializer: heNormal())
         bn = BatchNorm(featureCount: outputChannels)
@@ -47,11 +45,14 @@ struct Generator: Layer {
     
     var toRGB: Conv2D<Float>
     
+    var resize: Resize
+    
     @noDerivative
     let imageSize: ImageSize
     
     init(config: Config, imageSize: ImageSize) {
         self.imageSize = imageSize
+        self.resize = Resize(.bilinear, outputSize: .factor(x: 2, y: 2))
         
         let baseChannels = config.baseChannels
         let maxChannels = config.maxChannels
@@ -87,7 +88,8 @@ struct Generator: Layer {
         let io256 = ioChannels(for: .x256)
         x256Block = GBlock(inputChannels: io256.i, outputChannels: io256.o)
         
-        toRGB = Conv2D(filterShape: (1, 1, baseChannels, 3),
+        toRGB = Conv2D(filterShape: (3, 3, baseChannels, 3),
+                       padding: .same,
                        activation: tanh,
                        useBias: false,
                        filterInitializer: heNormal())
@@ -103,31 +105,37 @@ struct Generator: Layer {
             return toRGB(x)
         }
         
+        x = resize(x)
         x = x8Block(x)
         if imageSize == .x8 {
             return toRGB(x)
         }
         
+        x = resize(x)
         x = x16Block(x)
         if imageSize == .x16 {
             return toRGB(x)
         }
         
+        x = resize(x)
         x = x32Block(x)
         if imageSize == .x32 {
             return toRGB(x)
         }
         
+        x = resize(x)
         x = x64Block(x)
         if imageSize == .x64 {
             return toRGB(x)
         }
         
+        x = resize(x)
         x = x128Block(x)
         if imageSize == .x128 {
             return toRGB(x)
         }
         
+        x = resize(x)
         x = x256Block(x)
         return toRGB(x)
     }
