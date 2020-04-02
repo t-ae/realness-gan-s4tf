@@ -45,14 +45,13 @@ struct Generator: Layer {
     
     var toRGB: Conv2D<Float>
     
-    var resize: Resize
+    var upsample = UpSampling2D<Float>(size: 2)
     
     @noDerivative
     let imageSize: ImageSize
     
     init(config: Config, imageSize: ImageSize) {
         self.imageSize = imageSize
-        self.resize = Resize(.bilinear, outputSize: .factor(x: 2, y: 2))
         
         let baseChannels = config.baseChannels
         let maxChannels = config.maxChannels
@@ -100,42 +99,41 @@ struct Generator: Layer {
         var x = input.expandingShape(at: 1, 2)
         
         x = x4Block(x)
-        
         if imageSize == .x4 {
             return toRGB(x)
         }
         
-        x = resize(x)
+        x = upsample(x)
         x = x8Block(x)
         if imageSize == .x8 {
             return toRGB(x)
         }
         
-        x = resize(x)
+        x = upsample(x)
         x = x16Block(x)
         if imageSize == .x16 {
             return toRGB(x)
         }
         
-        x = resize(x)
+        x = upsample(x)
         x = x32Block(x)
         if imageSize == .x32 {
             return toRGB(x)
         }
         
-        x = resize(x)
+        x = upsample(x)
         x = x64Block(x)
         if imageSize == .x64 {
             return toRGB(x)
         }
         
-        x = resize(x)
+        x = upsample(x)
         x = x128Block(x)
         if imageSize == .x128 {
             return toRGB(x)
         }
         
-        x = resize(x)
+        x = upsample(x)
         x = x256Block(x)
         return toRGB(x)
     }
