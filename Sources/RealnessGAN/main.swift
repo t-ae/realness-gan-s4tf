@@ -7,13 +7,13 @@ import TensorBoardX
 Context.local.randomSeed = (42, 42)
 let rng = XorshiftRandomNumberGenerator()
 
-let imageSize: ImageSize = .x32
+let imageSize: ImageSize = .x256
 let latentSize = 128
 let batchSize = 32
 
 let config = Config(
     batchSize: batchSize,
-    learningRates: GDPair(G: 1e-4, D: 4e-4),
+    learningRates: GDPair(G: 1e-4, D: 1e-4),
     featureResampling: GDPair(G: true, D: true),
     imageSize: imageSize,
     G: Generator.Config(
